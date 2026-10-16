@@ -1,0 +1,54 @@
+# engsys config — LITE profile (low-usage). Copy to your project root as
+# engsys.config.yaml, edit, then run:  /path/to/engsys/install install --into .
+# What lite changes and why: docs/lite-profile.md. Switch back any time by
+# deleting the `profile:` line (or setting it to `full`) and running `update`.
+
+profile: lite
+
+project:
+  name: tictactoe-5x5
+  description: 5x5 four-in-a-row tic-tac-toe for the terminal in pure Python, with easy/medium/hard/expert difficulty levels.
+
+# Every stack dimension accepts a single value OR a list.
+stack:
+  cloud: none           # aws | azure | gcp | cloudflare | none   — or a list
+  iac: none             # terraform | bicep | cdk | none          — or a list
+  lang: [python]    # typescript | python | swift | kotlin | shell
+  platform: []       # web | ios | android
+  db: none              # prisma | mongo | none
+
+issue_tracker: github   # github | linear
+
+# Lite roster (all Sonnet): isabelle, bert, jody, nyx, aaron, patricia.
+# The architecture/testing/UX/design/LLM-cost specialists are inline "lenses"
+# (a skill), not agents. To pull a full-catalog persona back in by name:
+#   agents: { core: all, extra: [melvin] }     # note: melvin runs on Opus
+agents:
+  core: all
+  extra: []
+
+commands: all           # or an explicit list; names missing from lite fall back to core
+
+# Extra core skills beyond the lite set (these can be large — each is a
+# heavier read when it triggers): gh-cli, refactor, git-workflow-agents,
+# github-actions, web-design-reviewer, llm-structured-outputs, agentic-eval
+# skills:
+#   extra: [refactor]
+
+# The 24 seeded lessons are only worth their tokens if agents read them; lite
+# leaves them off. Project-specific lessons still accrue in docs/agent-lessons/.
+lessons:
+  seed: false
+
+# Biggest lever beyond lite: offload implementation/review to another provider's
+# quota (Codex, DeepSeek, Grok) so it costs no Claude usage. One command:
+#   engsys enable-providers codex,deepseek --into .
+
+naturalize:
+  hook_patterns: []
+  invariants: []
+  # project_facts: |
+  #   Multi-line project facts can go here.
+
+engsys:
+  version: main
