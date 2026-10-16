@@ -1,0 +1,42 @@
+{
+  "engsysVersion": "1.0.0",
+  "engsysRef": "main",
+  "configHash": "8b56ac5fa85840ea26dbffc30544dc4b4fab55542f6ac3a62807e95222297a69",
+  "mode": "install",
+  "packs": [
+    "lang/python",
+    "tooling/issue-tracker-github"
+  ],
+  "managed": {
+    ".claude/agents/aaron.md": "2ee43f4285ff07c0decfa79d569265b19c101284dbc538e50cffd119b7df891a",
+    ".claude/agents/bert.md": "8f0f239242fa7cd3be04fdd0671ffb680b19983b9f0094de48d5e09d47db13d7",
+    ".claude/agents/isabelle.md": "39ee1864e0408ef69b9366ee480f38d9bec8b086b708e2d72a80f738f970a289",
+    ".claude/agents/jody.md": "693614904c8e9e93086049c661a18c873904e3520f767e02f646f851bbfa500d",
+    ".claude/agents/nyx.md": "fda28a2e6a75a429b8e968144307eecd080f196ea706424eb4c59331e95ea1e1",
+    ".claude/agents/patricia.md": "eb36570fea87ce6210bb0ce25fc8b6f166bbb15b29dbc81d109c907a11b94414",
+    ".claude/commands/design-critique.md": "dbd209d51020ff0ae4d5a1c5b91a42f12fb39d8f0184ef9bbb6464a317909b9c",
+    ".claude/commands/file-issue.md": "697cabad726ef847c25eb6e3f39ebd2dee0c2fabda38429c1a606dd6a38f3118",
+    ".claude/commands/generate-project.md": "3f0382ec724189033b6b0969465b1afec60a8f9366981e37f17751de41c0a746",
+    ".claude/commands/implement-issue.md": "23de875398c138d12f94c08e59044ccf1d0a474f7034314e87701cbc0d3cee00",
+    ".claude/commands/implement-project.md": "af60fe0844f1d798a66ba69cb3290336c380922e39c9c4969395f74bb9e1d651",
+    ".claude/commands/naturalize.md": "3df0a409ef1df81f228039aef9f32234f31342b5a5306c59493084ebc7080277",
+    ".claude/commands/pre-push.md": "0cc5330d9e43a9c6c502f2c599dd24c94861407ef7e6a886c9719d682b39106b",
+    ".claude/commands/project-closeout.md": "c1a2a3a62828b93d85c48da04b8ebefce69b9f6978862eb0e51ae7cbca68fbe3",
+    ".claude/skills/lenses/SKILL.md": "7eeff396afcb4630620e90cd5163ef208644f76e0326bea43b208887de91664e",
+    ".claude/skills/code-review/SKILL.md": "f396d1c5b9774391419febb731ffb6baf4762b38930d3eb629a683deb80f51a3",
+    ".claude/skills/git-commit/SKILL.md": "2352ab436a6d3b0bd3e18d313d0b744a6901f63079919c90465ade40c6e513c0",
+    ".claude/skills/pre-push/SKILL.md": "57a00daf5c97d13e916616ebf9a66022289c1e15685d7363cbad501e362d9b86",
+    ".claude/skills/webapp-testing/SKILL.md": "2f159cfda592cecb50bbb7d975fdf9ae5c2cea1292ecd54d2cbe4a48b64aae81",
+    ".claude/skills/webapp-testing/test-helper.js": "582dc4db54a268f54969a557e22a154e2fbce84f5a592a1e86c2518dbf187cf4",
+    ".claude/skills/chrome-devtools/SKILL.md": "7d8cb8a7f1bf78a52cde5a88b30e05cf9e8fde29beb7a218d1e0243c0b8f38da",
+    ".claude/skills/python-conventions/SKILL.md": "bda509e71b062542a496ef542861ccf50d4a7b87ff8b48324440db0f0b8e40b5",
+    ".claude/skills/issue-tracker-github/SKILL.md": "69619ec1c41eff60a25cf106f1c95c1e6e6c3e79417ff24f9e5deeb5a0e127a8"
+  },
+  "generated": [
+    "CLAUDE.md",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    ".claude/hooks/post-edit-reminders.sh"
+  ],
+  "profile": "lite"
+}
