@@ -1,4 +1,4 @@
-"""Computer players: heuristic, easy, medium and hard strategies.
+"""Computer players: heuristic plus easy, medium, hard and expert strategies.
 
 Pure functions: no printing, no sleeping, and the board passed in is never
 mutated. All win detection is delegated to ``rules``.
@@ -7,16 +7,21 @@ mutated. All win detection is delegated to ``rules``.
 from __future__ import annotations
 
 import random
+import time
 
 from . import rules
 from .rules import CELLS, EMPTY, SIZE, WIN_LINES, Board, Move
 
-LEVELS = ("easy", "medium", "hard")
+LEVELS = ("easy", "medium", "hard", "expert")
 
 WIN_SCORE = 10_000  # terminal win, minus ply so faster wins score higher
 THREAT_BONUS = 5_000  # side to move has a winning cell / opponent has two
 LINE_WEIGHTS = (0, 1, 10, 100)  # by number of marks on a one-sided line
 HARD_DEPTH = 4
+TT_MAX_ENTRIES = 300_000
+CHECK_EVERY = 512  # nodes between clock / node-limit checks
+MATE_BOUND = WIN_SCORE - 100  # |score| above this is a proven win or loss
+EXACT, LOWER, UPPER = 0, 1, 2  # transposition table bound flags
 CENTRE = (SIZE * SIZE) // 2
 
 _Rng = random.Random
@@ -240,6 +245,179 @@ def _hard_move(board: Board, player: str, rng: _Rng) -> Move:
     return rng.choice(moves)
 
 
+class _Stop(Exception):
+    """Raised inside the expert search when the budget runs out."""
+
+
+class _Expert:
+    """Iterative-deepening alpha-beta with a transposition table.
+
+    Approach: search depth 1, 2, 3, ... and keep the best moves of the last
+    depth that finished; an interrupted depth is discarded. Depth 1 always
+    completes. The table is per call, so nothing leaks between moves.
+    """
+
+    def __init__(self, deadline: float, node_limit: int | None) -> None:
+        self.deadline = deadline
+        self.node_limit = node_limit
+        self.nodes = 0
+        self.can_stop = False  # False while depth 1 runs, so it always finishes
+        self.tt: dict[tuple[tuple[str, ...], str], tuple[int, int, int, Move]] = {}
+        self.killers: dict[int, list[Move]] = {}
+
+    def _check_stop(self) -> None:
+        if self.node_limit is not None and self.nodes >= self.node_limit:
+            raise _Stop
+        if time.monotonic() >= self.deadline:
+            raise _Stop
+
+    def _order(
+        self, board: Board, player: str, moves: list[Move], first: Move, ply: int
+    ) -> list[Move]:
+        """Best-first: previous/table move, killers, then static priority."""
+        killers = self.killers.get(ply, ())
+
+        def key(m: Move) -> tuple[int, int]:
+            bonus = 0
+            if m == first:
+                bonus = 1_000_000
+            elif m in killers:
+                bonus = 10_000
+            return (-(bonus + cell_priority(board, m, player)), m)
+
+        return sorted(moves, key=key)
+
+    def negamax(
+        self, board: Board, player: str, depth: int, alpha: int, beta: int, ply: int
+    ) -> int:
+        """Score for ``player`` to move; mate scores are ply-adjusted."""
+        self.nodes += 1
+        if self.can_stop and self.nodes % CHECK_EVERY == 0:
+            self._check_stop()
+        other = rules.opponent(player)
+        if rules.immediate_wins(board, player):
+            return WIN_SCORE - (ply + 1)
+        threats = rules.immediate_wins(board, other)
+        if len(threats) >= 2:  # can block only one
+            return -(WIN_SCORE - (ply + 2))
+        if depth <= 0:
+            return evaluate(board, player)
+        key = (board.key(), player)
+        entry = self.tt.get(key)
+        first = -1
+        if entry is not None:
+            e_depth, e_val, e_flag, first = entry
+            if e_depth >= depth:
+                value = _from_tt(e_val, ply)
+                if e_flag == EXACT:
+                    return value
+                if e_flag == LOWER:
+                    alpha = max(alpha, value)
+                elif e_flag == UPPER:
+                    beta = min(beta, value)
+                if alpha >= beta:
+                    return value
+        if threats:
+            moves = threats  # forced block
+        else:
+            moves = self._order(board, player, candidates(board), first, ply)
+        orig_alpha = alpha
+        best = -WIN_SCORE
+        best_move = moves[0]
+        for m in moves:
+            board.play(m, player)
+            if rules.is_full(board):
+                score = 0
+            else:
+                score = -self.negamax(board, other, depth - 1, -beta, -alpha, ply + 1)
+            board.undo(m)
+            if score > best:
+                best, best_move = score, m
+                if best > alpha:
+                    alpha = best
+                    if alpha >= beta:
+                        ks = self.killers.setdefault(ply, [])
+                        if m not in ks:
+                            ks.insert(0, m)
+                            del ks[2:]
+                        break
+        flag = EXACT
+        if best <= orig_alpha:
+            flag = UPPER
+        elif best >= beta:
+            flag = LOWER
+        if len(self.tt) >= TT_MAX_ENTRIES:
+            self.tt.clear()
+        self.tt[key] = (depth, _to_tt(best, ply), flag, best_move)
+        return best
+
+    def _root(self, board: Board, player: str, depth: int, first: Move) -> tuple[int, list[Move]]:
+        """Best value and all root moves tied for it at this depth."""
+        other = rules.opponent(player)
+        best = -WIN_SCORE - 1
+        tied: list[Move] = []
+        for m in self._order(board, player, candidates(board), first, 0):
+            board.play(m, player)
+            if rules.is_full(board):
+                score = 0
+            else:
+                # Window (best-1, inf) keeps moves tied with the best exact.
+                score = -self.negamax(board, other, depth - 1, -WIN_SCORE - 1, -(best - 1), 1)
+            board.undo(m)
+            if score > best:
+                best, tied = score, [m]
+            elif score == best:
+                tied.append(m)
+        return best, tied
+
+    def search(self, board: Board, player: str) -> list[Move]:
+        """Return the tied best moves of the deepest completed iteration."""
+        work = board.copy()
+        empties = len(rules.legal_moves(work))
+        best_moves: list[Move] = []
+        first = -1
+        for depth in range(1, empties + 1):
+            self.can_stop = depth > 1
+            try:
+                value, tied = self._root(work, player, depth, first)
+            except _Stop:
+                break
+            best_moves = tied
+            first = tied[0]
+            if abs(value) >= MATE_BOUND:  # proven win or loss: deeper adds nothing
+                break
+        return best_moves
+
+
+def _to_tt(value: int, ply: int) -> int:
+    """Make a mate score independent of the ply it was found at."""
+    if value >= MATE_BOUND:
+        return value + ply
+    if value <= -MATE_BOUND:
+        return value - ply
+    return value
+
+
+def _from_tt(value: int, ply: int) -> int:
+    """Inverse of ``_to_tt``."""
+    if value >= MATE_BOUND:
+        return value - ply
+    if value <= -MATE_BOUND:
+        return value + ply
+    return value
+
+
+def _expert_move(
+    board: Board, player: str, rng: _Rng, budget: float, node_limit: int | None
+) -> Move:
+    """Time-bounded iterative deepening, random among equal best moves."""
+    cands = candidates(board)
+    if len(cands) == 1:
+        return cands[0]
+    search = _Expert(time.monotonic() + budget, node_limit)
+    return rng.choice(search.search(board, player))
+
+
 def choose_move(
     board: Board,
     player: str,
@@ -271,4 +449,6 @@ def choose_move(
         return _easy_move(board, player, rng)
     if level == "medium":
         return _medium_move(board, player, rng)
-    return _hard_move(board, player, rng)
+    if level == "hard":
+        return _hard_move(board, player, rng)
+    return _expert_move(board, player, rng, budget, node_limit)

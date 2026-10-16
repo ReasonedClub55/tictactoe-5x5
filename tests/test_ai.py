@@ -8,7 +8,7 @@ from collections import Counter
 from tictactoe5 import ai, rules
 from tictactoe5.rules import Board, O, X
 
-LEVELS = ai.LEVELS
+LEVELS = ("easy", "medium", "hard")  # expert is covered in test_expert.py
 
 
 def board(*rows: str) -> Board:
