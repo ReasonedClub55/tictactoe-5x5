@@ -82,6 +82,13 @@ class StatusTest(unittest.TestCase):
         self.assertEqual(b, Board())
         self.assertEqual(rules.legal_moves(b), list(range(25)))
 
+    def test_completes_four(self) -> None:
+        b = board("XXX..", ".....", ".....", ".....", ".....")
+        self.assertFalse(rules.completes_four(b, 2, X))
+        b.play(3, X)
+        self.assertTrue(rules.completes_four(b, 3, X))
+        self.assertFalse(rules.completes_four(b, 3, O))
+
     def test_immediate_wins(self) -> None:
         b = board("XXX..", ".....", ".....", ".....", ".....")
         self.assertEqual(rules.immediate_wins(b, X), [3])

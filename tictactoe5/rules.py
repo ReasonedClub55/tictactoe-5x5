@@ -41,6 +41,11 @@ def _build_win_lines() -> tuple[Line, ...]:
 
 WIN_LINES: tuple[Line, ...] = _build_win_lines()
 
+# For each cell, the WIN_LINES that pass through it (used by fast checks).
+LINES_BY_CELL: tuple[tuple[Line, ...], ...] = tuple(
+    tuple(line for line in WIN_LINES if cell in line) for cell in range(CELLS)
+)
+
 
 def opponent(player: str) -> str:
     """Return the other player's mark."""
@@ -135,6 +140,19 @@ def status(board: Board) -> str:
     if won:
         return won
     return "draw" if is_full(board) else "ongoing"
+
+
+def completes_four(board: Board, cell: Move, player: str) -> bool:
+    """Return True if ``player`` already holds ``cell`` as part of a four.
+
+    Meant to be called right after ``player`` played ``cell``; only lines
+    through that cell are examined.
+    """
+    cells = board.cells
+    for line in LINES_BY_CELL[cell]:
+        if all(cells[i] == player for i in line):
+            return True
+    return False
 
 
 def immediate_wins(board: Board, player: str) -> list[Move]:
