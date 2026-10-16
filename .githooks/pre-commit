@@ -1,0 +1,44 @@
+#!/bin/sh
+# Pre-commit gate: block likely secrets in staged changes, then run the unit
+# tests when Python files are staged. Enable once per clone with:
+#   git config core.hooksPath .githooks
+# Bypass in an emergency with `git commit --no-verify` (CI still runs).
+set -eu
+
+# 1. Never commit env files.
+if git diff --cached --name-only --diff-filter=ACM | grep -Eq '(^|/)\.env($|\.)' \
+  && ! git diff --cached --name-only --diff-filter=ACM | grep -Eq '(^|/)\.env\.example$'; then
+  echo "pre-commit: refusing to commit a .env file. Unstage it (git restore --staged <file>)." >&2
+  exit 1
+fi
+
+# 2. Scan only added lines; this hooks folder is excluded so its own patterns don't match.
+patterns='-----BEGIN [A-Z ]*PRIVATE KEY-----'
+patterns="$patterns|AKIA[0-9A-Z]{16}"
+patterns="$patterns|gh[pousr]_[A-Za-z0-9]{36,}"
+patterns="$patterns|github_pat_[A-Za-z0-9_]{22,}"
+patterns="$patterns|sk-(ant-)?[A-Za-z0-9_-]{20,}"
+patterns="$patterns|xox[abprs]-[A-Za-z0-9-]{10,}"
+patterns="$patterns|(api[_-]?key|secret|passw(or)?d|token)[\"']?[[:space:]]*[:=][[:space:]]*[\"'][^\"'[:space:]]{12,}[\"']"
+
+hits=$(git diff --cached -U0 --diff-filter=ACM -- . ':(exclude).githooks/*' \
+  | grep -E '^\+[^+]' | grep -Ein -e "$patterns" || true)
+if [ -n "$hits" ]; then
+  echo "pre-commit: possible secret in staged changes:" >&2
+  echo "$hits" | cut -c1-120 >&2
+  echo "Remove it (and rotate it if it was real), or commit with --no-verify if this is a false positive." >&2
+  exit 1
+fi
+
+# 3. Fast tests (about a second) when any Python file is staged.
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.py$'; then
+  py=$(command -v python3 || command -v python || true)
+  if [ -z "$py" ]; then
+    echo "pre-commit: Python not found; skipping tests." >&2
+  else
+    "$py" -m unittest discover -s tests -q || {
+      echo "pre-commit: tests failed; commit aborted." >&2
+      exit 1
+    }
+  fi
+fi

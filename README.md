@@ -1,5 +1,7 @@
 # tictactoe-5x5
 
+[![CI](https://github.com/ReasonedClub55/tictactoe-5x5/actions/workflows/ci.yml/badge.svg)](https://github.com/ReasonedClub55/tictactoe-5x5/actions/workflows/ci.yml) [![CodeQL](https://github.com/ReasonedClub55/tictactoe-5x5/actions/workflows/codeql.yml/badge.svg)](https://github.com/ReasonedClub55/tictactoe-5x5/actions/workflows/codeql.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A terminal game: tic-tac-toe on a 5x5 board where **four in a row** (horizontal, vertical or diagonal) wins. You play against the computer at one of four difficulty levels.
 
 ## Requirements
@@ -37,6 +39,19 @@ Expert is a strong search, not a solved game: it is **not** guaranteed to be unb
 python3 -m unittest discover -s tests -v
 ```
 
+## Development hooks
+
+Git hooks live in `.githooks/`. Turn them on once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+- **pre-commit** blocks staged `.env` files and likely secrets (private keys, cloud and GitHub tokens, `api_key = "..."`-style assignments), then runs the unit tests if any Python file is staged.
+- **pre-push** runs the full test suite and byte-compiles every module.
+
+CI (`.github/workflows/ci.yml`) runs the same tests under `unittest` and `pytest` on Linux, macOS and Windows with Python 3.12 and 3.13. CodeQL scans the Python code and the workflows. Dependabot keeps the GitHub Actions versions current.
+
 ## AI tournament
 
 `scripts/tournament.py` plays the levels against each other (every pairing, alternating who moves first) and prints wins/draws/losses from the first-named level's point of view.
@@ -62,3 +77,11 @@ hard vs expert         0   4   0
 ## How it was built
 
 The idea was discussed in a Dream Team session (Eon, Joss), then planned and built with the engsys lite profile: Jody wrote the spec, Isabelle implemented, Patricia wrote the docs. The spec and plan are in `docs/specs/tictactoe-5x5.md`.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for scope and how to report a vulnerability privately.
+
+## License
+
+[MIT](LICENSE) © 2026 ReasonedClub55

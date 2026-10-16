@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pre-push gate: full unit test suite and a byte-compile of every module.
+# Enable once per clone with:  git config core.hooksPath .githooks
+set -eu
+py=$(command -v python3 || command -v python || true)
+if [ -z "$py" ]; then
+  echo "pre-push: Python not found; skipping checks." >&2
+  exit 0
+fi
+"$py" -m unittest discover -s tests -q
+"$py" -m compileall -q tictactoe5 scripts tests
